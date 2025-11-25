@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -49,7 +50,7 @@ func TestJWTModule_Encrypt_Decrypt_String(t *testing.T) {
 	}
 
 	plaintext := "Hello, World!"
-	encrypted, err := module.Encrypt(plaintext)
+	encrypted, err := module.Encrypt(context.Background(), plaintext)
 	if err != nil {
 		t.Fatalf("Encrypt() error = %v", err)
 	}
@@ -64,7 +65,7 @@ func TestJWTModule_Encrypt_Decrypt_String(t *testing.T) {
 		t.Error("Encrypt() returned invalid JWT format")
 	}
 
-	decrypted, err := module.Decrypt(encrypted)
+	decrypted, err := module.Decrypt(context.Background(), encrypted)
 	if err != nil {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
@@ -92,12 +93,12 @@ func TestJWTModule_Encrypt_Decrypt_Map(t *testing.T) {
 		"email":    "john@example.com",
 	}
 
-	encrypted, err := module.Encrypt(data)
+	encrypted, err := module.Encrypt(context.Background(), data)
 	if err != nil {
 		t.Fatalf("Encrypt() error = %v", err)
 	}
 
-	decrypted, err := module.Decrypt(encrypted)
+	decrypted, err := module.Decrypt(context.Background(), encrypted)
 	if err != nil {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
@@ -126,17 +127,17 @@ func TestJWTModule_Encrypt_WithTTL(t *testing.T) {
 		"user_id": 12345,
 	}
 
-	// Encrypt with TTL - create EncryptOptions directly to avoid import cycle
+	// Encrypt with TTL - create TokenOptions inline to avoid import cycle
 	ttlOption := &struct {
 		TTL time.Duration
 	}{TTL: 1 * time.Hour}
-	encrypted, err := module.Encrypt(data, ttlOption)
+	encrypted, err := module.Encrypt(context.Background(), data, ttlOption)
 	if err != nil {
 		t.Fatalf("Encrypt() with TTL error = %v", err)
 	}
 
 	// Decrypt immediately should work
-	decrypted, err := module.Decrypt(encrypted)
+	decrypted, err := module.Decrypt(context.Background(), encrypted)
 	if err != nil {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
@@ -146,12 +147,12 @@ func TestJWTModule_Encrypt_WithTTL(t *testing.T) {
 	}
 
 	// Encrypt without TTL
-	encryptedNoTTL, err := module.Encrypt(data)
+	encryptedNoTTL, err := module.Encrypt(context.Background(), data)
 	if err != nil {
 		t.Fatalf("Encrypt() without TTL error = %v", err)
 	}
 
-	decryptedNoTTL, err := module.Decrypt(encryptedNoTTL)
+	decryptedNoTTL, err := module.Decrypt(context.Background(), encryptedNoTTL)
 	if err != nil {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
@@ -176,13 +177,13 @@ func TestJWTModule_Decrypt_WithDifferentKey(t *testing.T) {
 		"message": "Secret message",
 	}
 
-	encrypted, err := module1.Encrypt(data)
+	encrypted, err := module1.Encrypt(context.Background(), data)
 	if err != nil {
 		t.Fatalf("Encrypt() error = %v", err)
 	}
 
 	// Decrypt with same key should work
-	decrypted, err := module1.Decrypt(encrypted)
+	decrypted, err := module1.Decrypt(context.Background(), encrypted)
 	if err != nil {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
@@ -192,13 +193,13 @@ func TestJWTModule_Decrypt_WithDifferentKey(t *testing.T) {
 	}
 
 	// Decrypt with different key should fail (invalid signature)
-	_, err = module2.Decrypt(encrypted)
+		_, err = module2.Decrypt(context.Background(), encrypted)
 	if err == nil {
 		t.Error("Decrypt() with different key should fail")
 	}
 
 	// Decrypt with explicit different key
-	_, err = module1.Decrypt(encrypted, "different-key")
+		_, err = module1.Decrypt(context.Background(), encrypted, "different-key")
 	if err == nil {
 		t.Error("Decrypt() with explicit different key should fail")
 	}
@@ -231,12 +232,12 @@ func TestJWTModule_Verify(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			encrypted, err := module.Encrypt(tt.data)
+			encrypted, err := module.Encrypt(context.Background(), tt.data)
 			if err != nil {
 				t.Fatalf("Encrypt() error = %v", err)
 			}
 
-			valid, err := module.Verify(tt.data, encrypted)
+			valid, err := module.Verify(context.Background(), tt.data, encrypted)
 			if err != nil {
 				t.Fatalf("Verify() error = %v", err)
 			}
@@ -247,7 +248,7 @@ func TestJWTModule_Verify(t *testing.T) {
 
 			// Verify with wrong data should fail
 			wrongData := "wrong data"
-			valid, err = module.Verify(wrongData, encrypted)
+			valid, err = module.Verify(context.Background(), wrongData, encrypted)
 			if err != nil {
 				t.Fatalf("Verify() error = %v", err)
 			}
@@ -299,7 +300,7 @@ func TestJWTModule_Decrypt_InvalidToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := module.Decrypt(tt.token)
+			_, err := module.Decrypt(context.Background(), tt.token)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Decrypt() error = %v, wantErr %v (%s)", err, tt.wantErr, tt.description)
 			}

@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -11,7 +12,11 @@ import (
 	"time"
 )
 
-// JWTModule implements JWT token encryption/decryption
+// JWTModule implements JWT (JSON Web Token) token creation and verification.
+// Note: JWT is a token format/standard (RFC 7519), not an encryption algorithm.
+// This module creates JWS (JSON Web Signature) tokens - the payload is base64-encoded
+// and signed with HMAC-SHA256, but NOT encrypted. Anyone can decode the payload;
+// the signature only verifies authenticity and integrity.
 type JWTModule struct {
 	key string
 }
@@ -23,7 +28,8 @@ type JWTClaims struct {
 	ExpiresAt int64                  `json:"exp,omitempty"`
 }
 
-// NewJWTModule creates a new JWT encryption module
+// NewJWTModule creates a new JWT token module.
+// The key is used for HMAC-SHA256 signing to verify token authenticity.
 func NewJWTModule(key string) (*JWTModule, error) {
 	if key == "" {
 		return nil, fmt.Errorf("JWT secret key cannot be empty")
@@ -57,11 +63,18 @@ func (j *JWTModule) dataToMap(data interface{}) (map[string]interface{}, error) 
 	}
 }
 
-// Encrypt creates a JWT token from data of any type
-// Supports TTL through EncryptOptions (from cryptography package)
-// If TTL is 0, the token will not expire
-// If TTL > 0, the token will expire after the specified duration
-func (j *JWTModule) Encrypt(data interface{}, opts ...interface{}) (string, error) {
+// Encrypt creates a JWT (JWS) signed token from data of any type with context support.
+// Note: This method is named "Encrypt" for interface compatibility, but it actually
+// creates a SIGNED token (JWS), not an encrypted token (JWE). The payload is
+// base64-encoded and signed with HMAC-SHA256 for authenticity/integrity verification.
+// Supports TTL through TokenOptions (from cryptography package).
+// If TTL is 0, the token will not expire.
+// If TTL > 0, the token will expire after the specified duration.
+func (j *JWTModule) Encrypt(ctx context.Context, data interface{}, opts ...interface{}) (string, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if data == nil {
 		return "", fmt.Errorf("data cannot be nil")
 	}
@@ -73,7 +86,7 @@ func (j *JWTModule) Encrypt(data interface{}, opts ...interface{}) (string, erro
 	}
 
 	// Extract TTL from options using reflection
-	// Options should be *cryptography.EncryptOptions
+	// Options should be *cryptography.TokenOptions
 	var ttl time.Duration
 	for _, opt := range opts {
 		if opt == nil {
@@ -150,12 +163,20 @@ func (j *JWTModule) Encrypt(data interface{}, opts ...interface{}) (string, erro
 	return token, nil
 }
 
-// Decrypt extracts data from JWT token
-// Returns the original data structure (map, string, etc.)
-// Key is optional - if provided, uses that key instead of the module's default key
-func (j *JWTModule) Decrypt(ciphertext string, key ...string) (interface{}, error) {
+// Decrypt extracts and verifies data from a JWT token with context support.
+// Note: This method is named "Decrypt" for interface compatibility, but it actually
+// VERIFIES the token signature and extracts the payload. The payload is not encrypted,
+// just base64-encoded. Anyone can decode it, but only those with the correct key can
+// verify the signature.
+// Returns the original data structure (map, string, etc.).
+// Key is optional - if provided, uses that key instead of the module's default key.
+func (j *JWTModule) Decrypt(ctx context.Context, ciphertext string, key ...string) (interface{}, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if ciphertext == "" {
-		return nil, fmt.Errorf("ciphertext cannot be empty")
+		return nil, fmt.Errorf("token cannot be empty")
 	}
 
 	// Use provided key or default to module's key
@@ -166,7 +187,7 @@ func (j *JWTModule) Decrypt(ciphertext string, key ...string) (interface{}, erro
 
 	// Validate that we have a key (either from parameter or module default)
 	if decryptKey == "" {
-		return nil, fmt.Errorf("decryption key cannot be empty")
+		return nil, fmt.Errorf("verification key cannot be empty")
 	}
 
 	parts := strings.Split(ciphertext, ".")
@@ -229,9 +250,65 @@ func (j *JWTModule) createSignatureWithKey(data string, key string) string {
 	return signature
 }
 
-// Verify checks if the data matches the encrypted JWT token
-// For JWT modules, this decrypts the token and compares the data
-func (j *JWTModule) Verify(data interface{}, token string) (bool, error) {
+// Sign creates a signed JWT token with context support (implements Token interface).
+// This is the proper method name for token standards.
+func (j *JWTModule) Sign(ctx context.Context, data interface{}, opts ...interface{}) (string, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
+	// Perform signing with context check
+	done := make(chan struct{})
+	var result string
+	var err error
+
+	go func() {
+		result, err = j.Encrypt(ctx, data, opts...)
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case <-done:
+		return result, err
+	}
+}
+
+// VerifyToken verifies the token signature with context support (implements Token interface).
+// This is the proper method name for token standards.
+func (j *JWTModule) VerifyToken(ctx context.Context, token string, key ...string) (interface{}, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	// Perform verification with context check
+	done := make(chan struct{})
+	var result interface{}
+	var err error
+
+	go func() {
+		result, err = j.Decrypt(ctx, token, key...)
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+		return result, err
+	}
+}
+
+// Validate checks if the data matches the signed JWT token with context support (implements Token interface).
+func (j *JWTModule) Validate(ctx context.Context, data interface{}, token string) (bool, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+
 	if data == nil {
 		return false, fmt.Errorf("data cannot be nil")
 	}
@@ -239,26 +316,54 @@ func (j *JWTModule) Verify(data interface{}, token string) (bool, error) {
 		return false, fmt.Errorf("token cannot be empty")
 	}
 
-	// Decrypt the token
-	decrypted, err := j.Decrypt(token)
-	if err != nil {
-		return false, err
-	}
+	// Perform validation with context check
+	done := make(chan struct{})
+	var result bool
+	var err error
 
-	// Convert data to map for comparison
-	dataMap, err := j.dataToMap(data)
-	if err != nil {
-		return false, err
-	}
+	go func() {
+		// Verify the token
+		decrypted, verifyErr := j.VerifyToken(ctx, token)
+		if verifyErr != nil {
+			err = verifyErr
+			close(done)
+			return
+		}
 
-	// Compare with decrypted data
-	decryptedMap, ok := decrypted.(map[string]interface{})
-	if !ok {
-		return false, fmt.Errorf("decrypted data is not a map")
-	}
+		// Convert data to map for comparison
+		dataMap, mapErr := j.dataToMap(data)
+		if mapErr != nil {
+			err = mapErr
+			close(done)
+			return
+		}
 
-	// Simple comparison - in production, you might want deeper comparison
-	dataJSON, _ := json.Marshal(dataMap)
-	decryptedJSON, _ := json.Marshal(decryptedMap)
-	return string(dataJSON) == string(decryptedJSON), nil
+		// Compare with decrypted data
+		decryptedMap, ok := decrypted.(map[string]interface{})
+		if !ok {
+			err = fmt.Errorf("decrypted data is not a map")
+			close(done)
+			return
+		}
+
+		// Simple comparison - in production, you might want deeper comparison
+		dataJSON, _ := json.Marshal(dataMap)
+		decryptedJSON, _ := json.Marshal(decryptedMap)
+		result = string(dataJSON) == string(decryptedJSON)
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	case <-done:
+		return result, err
+	}
+}
+
+// Verify checks if the data matches the signed JWT token with context support.
+// This method implements the Encryption interface for compatibility.
+// For new code using Token interface, use Validate() instead.
+func (j *JWTModule) Verify(ctx context.Context, data interface{}, token string) (bool, error) {
+	return j.Validate(ctx, data, token)
 }

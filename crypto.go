@@ -3,77 +3,99 @@ package cryptography
 import (
 	"fmt"
 
-	"github.com/tjandrayana/cryptography/aes"
-	"github.com/tjandrayana/cryptography/hash"
-	"github.com/tjandrayana/cryptography/jwt"
+	"github.com/tjandrayana/cryptography/encryption/aes"
+	"github.com/tjandrayana/cryptography/hash/bcrypt"
+	"github.com/tjandrayana/cryptography/hash/sha"
+	"github.com/tjandrayana/cryptography/token/jwt"
 )
 
-// Cryptography defines the interface for encryption modules
-type Cryptography interface {
-	// Encrypt encrypts data of any type (string, map, struct, etc.)
-	// Returns the encrypted/hashed string representation
-	// Options can be *EncryptOptions or nil
-	// For hash modules, this performs one-way hashing
-	Encrypt(data interface{}, opts ...interface{}) (string, error)
-
-	// Decrypt decrypts the ciphertext and returns the original data
-	// The return type depends on what was encrypted (string, map, etc.)
-	// Key is optional - if not provided, uses the module's default key
-	// For hash modules, this returns an error (hashing is one-way)
-	Decrypt(ciphertext string, key ...string) (interface{}, error)
-
-	// Verify checks if the data matches the hash/encrypted value
-	// Returns true if the data matches, false otherwise
-	// For encryption modules, this verifies by decrypting and comparing
-	// For hash modules, this verifies the hash directly
-	Verify(data interface{}, hash string) (bool, error)
-}
-
-// ModuleType represents the type of encryption module
-type ModuleType string
+// EncryptionAlgorithm represents encryption algorithm types
+type EncryptionAlgorithm string
 
 const (
-	ModuleTypeAES  ModuleType = "aes"
-	ModuleTypeJWT  ModuleType = "jwt"
-	ModuleTypeHash ModuleType = "hash"
+	// EncryptionAES256GCM is the AES-256-GCM encryption algorithm
+	EncryptionAES256GCM EncryptionAlgorithm = "aes-256-gcm"
 )
 
-// NewModule creates a new encryption module based on the module type
-// For hash modules, the key parameter is used as the algorithm name (sha256, sha512, bcrypt)
-// If key is empty for hash modules, defaults to sha256
-func NewModule(moduleType ModuleType, key string) (Cryptography, error) {
-	switch moduleType {
-	case ModuleTypeAES:
+// TokenStandard represents token standard/formats
+type TokenStandard string
+
+const (
+	// TokenJWT is the JWT (JSON Web Token) standard (RFC 7519)
+	TokenJWT TokenStandard = "jwt"
+)
+
+// HashAlgorithm represents hashing algorithm types
+type HashAlgorithm string
+
+const (
+	// HashSHA256 is the SHA-256 hashing algorithm
+	HashSHA256 HashAlgorithm = "sha256"
+	// HashSHA512 is the SHA-512 hashing algorithm
+	HashSHA512 HashAlgorithm = "sha512"
+	// HashBcrypt is the bcrypt hashing algorithm
+	HashBcrypt HashAlgorithm = "bcrypt"
+)
+
+// NewEncryption creates a new encryption algorithm module.
+// Encryption algorithms provide confidentiality - data is encrypted and cannot be read without the key.
+//
+// Supported algorithms:
+//   - EncryptionAES256GCM: AES-256-GCM encryption algorithm
+//
+// The key is used for encryption. For AES-256-GCM, the key is derived using SHA-256 to ensure 32-byte length.
+func NewEncryption(algorithm EncryptionAlgorithm, key string) (Encryption, error) {
+	switch algorithm {
+	case EncryptionAES256GCM:
 		return aes.NewAESModule(key)
-	case ModuleTypeJWT:
-		return jwt.NewJWTModule(key)
-	case ModuleTypeHash:
-		// Use key as algorithm name, or default to sha256 if empty
-		return NewHashModule(key)
 	default:
-		return nil, fmt.Errorf("unsupported module type: %s", moduleType)
+		return nil, fmt.Errorf("unsupported encryption algorithm: %s", algorithm)
 	}
 }
 
-// NewHashModule creates a hash module with a specific algorithm
-// algorithm: "sha256" (default), "sha512", or "bcrypt"
-func NewHashModule(algorithm string) (Cryptography, error) {
-	var hashAlgo hash.HashAlgorithm
+// NewToken creates a new token standard module.
+// Token standards provide authenticity and integrity - verify data hasn't been tampered with.
+//
+// Supported standards:
+//   - TokenJWT: JWT (JSON Web Token) standard (RFC 7519) - creates JWS tokens
+//
+// The key is used for signing. For JWT, the key is used for HMAC-SHA256 signing.
+func NewToken(standard TokenStandard, key string) (Token, error) {
+	switch standard {
+	case TokenJWT:
+		return jwt.NewJWTModule(key)
+	default:
+		return nil, fmt.Errorf("unsupported token standard: %s", standard)
+	}
+}
+
+// NewHash creates a new hashing algorithm module.
+// Hashing algorithms provide one-way transformation - cannot be reversed.
+//
+// Supported algorithms:
+//   - HashSHA256: SHA-256 hashing algorithm (default)
+//   - HashSHA512: SHA-512 hashing algorithm
+//   - HashBcrypt: bcrypt hashing algorithm (for passwords)
+//
+// If algorithm is empty, defaults to SHA-256.
+func NewHash(algorithm HashAlgorithm) (Hash, error) {
 	switch algorithm {
-	case "sha256", "":
-		hashAlgo = hash.HashSHA256
-	case "sha512":
-		hashAlgo = hash.HashSHA512
-	case "bcrypt":
+	case HashSHA256, "":
+		return sha.NewSHAModule(sha.HashSHA256)
+	case HashSHA512:
+		return sha.NewSHAModule(sha.HashSHA512)
+	case HashBcrypt:
 		// Use default cost for bcrypt
-		return hash.NewBcryptModule(10) // bcrypt.DefaultCost is 10
+		return bcrypt.NewBcryptModule(10) // bcrypt.DefaultCost is 10
 	default:
 		return nil, fmt.Errorf("unsupported hash algorithm: %s (supported: sha256, sha512, bcrypt)", algorithm)
 	}
-	return hash.NewHashModule(hashAlgo, "")
 }
 
-// NewBcryptModule creates a bcrypt hash module with custom cost
-func NewBcryptModule(cost int) (Cryptography, error) {
-	return hash.NewBcryptModule(cost)
+// NewBcrypt creates a bcrypt hash module with custom cost.
+// Bcrypt is specifically designed for password hashing.
+//
+// cost: bcrypt cost factor (4-31, default is 10)
+func NewBcrypt(cost int) (Hash, error) {
+	return bcrypt.NewBcryptModule(cost)
 }

@@ -1,19 +1,20 @@
 package cryptography_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/tjandrayana/cryptography"
 )
 
-// ExampleNewModule_AES demonstrates basic AES encryption and decryption
-func ExampleNewModule_aes() {
-	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+// ExampleNewEncryption_AES demonstrates basic AES encryption and decryption
+func ExampleNewEncryption_aes() {
+	aesModule, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "my-secret-key-32-bytes-long!!")
 
 	plaintext := "Hello, World!"
-	encrypted, _ := aesModule.Encrypt(plaintext)
-	decrypted, _ := aesModule.Decrypt(encrypted)
+	encrypted, _ := aesModule.Encrypt(context.Background(), plaintext)
+	decrypted, _ := aesModule.Decrypt(context.Background(), encrypted)
 
 	if decryptedStr, ok := decrypted.(string); ok {
 		fmt.Printf("Decrypted: %s\n", decryptedStr)
@@ -22,13 +23,13 @@ func ExampleNewModule_aes() {
 	// Decrypted: Hello, World!
 }
 
-// ExampleNewModule_JWT demonstrates basic JWT token creation and decryption
-func ExampleNewModule_jwt() {
-	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
+// ExampleNewToken_JWT demonstrates basic JWT token creation and verification
+func ExampleNewToken_jwt() {
+	jwtModule, _ := cryptography.NewToken(cryptography.TokenJWT, "my-jwt-secret-key")
 
 	plaintext := "Hello, World!"
-	encrypted, _ := jwtModule.Encrypt(plaintext)
-	decrypted, _ := jwtModule.Decrypt(encrypted)
+	token, _ := jwtModule.Sign(context.Background(), plaintext)
+	decrypted, _ := jwtModule.VerifyToken(context.Background(), token)
 
 	if dataMap, ok := decrypted.(map[string]interface{}); ok {
 		if message, ok := dataMap["message"].(string); ok {
@@ -39,9 +40,9 @@ func ExampleNewModule_jwt() {
 	// Decrypted message: Hello, World!
 }
 
-// ExampleNewModule_JWT_StructuredData demonstrates JWT with structured data
-func ExampleNewModule_jwtStructuredData() {
-	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
+// ExampleNewToken_JWT_StructuredData demonstrates JWT with structured data
+func ExampleNewToken_jwtStructuredData() {
+	jwtModule, _ := cryptography.NewToken(cryptography.TokenJWT, "my-jwt-secret-key")
 
 	data := map[string]interface{}{
 		"user_id":  12345,
@@ -49,8 +50,8 @@ func ExampleNewModule_jwtStructuredData() {
 		"email":    "john@example.com",
 	}
 
-	token, _ := jwtModule.Encrypt(data)
-	decrypted, _ := jwtModule.Decrypt(token)
+	token, _ := jwtModule.Sign(context.Background(), data)
+	decrypted, _ := jwtModule.VerifyToken(context.Background(), token)
 
 	if dataMap, ok := decrypted.(map[string]interface{}); ok {
 		fmt.Printf("User ID: %v\n", dataMap["user_id"])
@@ -61,19 +62,19 @@ func ExampleNewModule_jwtStructuredData() {
 	// Username: john_doe
 }
 
-// ExampleNewModule_JWT_WithTTL demonstrates JWT with time-to-live
-func ExampleNewModule_jwtWithTTL() {
-	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
+// ExampleNewToken_JWT_WithTTL demonstrates JWT with time-to-live
+func ExampleNewToken_jwtWithTTL() {
+	jwtModule, _ := cryptography.NewToken(cryptography.TokenJWT, "my-jwt-secret-key")
 
 	data := map[string]interface{}{
 		"user_id": 12345,
 	}
 
 	// Token expires in 1 hour
-	token, _ := jwtModule.Encrypt(data, cryptography.WithTTL(1*time.Hour))
+	token, _ := jwtModule.Sign(context.Background(), data, cryptography.WithTokenTTL(1*time.Hour))
 
-	// Decrypt immediately (should work)
-	decrypted, _ := jwtModule.Decrypt(token)
+	// Verify immediately (should work)
+	decrypted, _ := jwtModule.VerifyToken(context.Background(), token)
 	if dataMap, ok := decrypted.(map[string]interface{}); ok {
 		fmt.Printf("User ID: %v\n", dataMap["user_id"])
 		fmt.Printf("Token valid: %v\n", dataMap["user_id"] != nil)
@@ -83,9 +84,9 @@ func ExampleNewModule_jwtWithTTL() {
 	// Token valid: true
 }
 
-// ExampleNewModule_AES_StructuredData demonstrates AES encryption with structs
-func ExampleNewModule_aesStructuredData() {
-	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+// ExampleNewEncryption_AES_StructuredData demonstrates AES encryption with structs
+func ExampleNewEncryption_aesStructuredData() {
+	aesModule, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "my-secret-key-32-bytes-long!!")
 
 	type User struct {
 		ID       int    `json:"id"`
@@ -94,8 +95,8 @@ func ExampleNewModule_aesStructuredData() {
 	}
 
 	user := User{ID: 123, Username: "jane_doe", Email: "jane@example.com"}
-	encrypted, _ := aesModule.Encrypt(user)
-	decrypted, _ := aesModule.Decrypt(encrypted)
+	encrypted, _ := aesModule.Encrypt(context.Background(), user)
+	decrypted, _ := aesModule.Decrypt(context.Background(), encrypted)
 
 	if dataMap, ok := decrypted.(map[string]interface{}); ok {
 		fmt.Printf("ID: %v\n", dataMap["id"])
@@ -108,19 +109,19 @@ func ExampleNewModule_aesStructuredData() {
 	// Email: jane@example.com
 }
 
-// ExampleNewModule_AES_KeyRotation demonstrates key rotation with AES
-func ExampleNewModule_aesKeyRotation() {
-	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "original-key-32-bytes-long!!")
+// ExampleNewEncryption_AES_KeyRotation demonstrates key rotation with AES
+func ExampleNewEncryption_aesKeyRotation() {
+	aesModule, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "original-key-32-bytes-long!!")
 
 	// Encrypt with original key
-	encrypted, _ := aesModule.Encrypt("Secret message")
+	encrypted, _ := aesModule.Encrypt(context.Background(), "Secret message")
 
 	// Decrypt with same key (default)
-	decrypted1, _ := aesModule.Decrypt(encrypted)
+	decrypted1, _ := aesModule.Decrypt(context.Background(), encrypted)
 	fmt.Printf("Decrypted with default key: %v\n", decrypted1)
 
 	// Decrypt with different key (will fail)
-	_, err := aesModule.Decrypt(encrypted, "different-key-32-bytes-long!!")
+	_, err := aesModule.Decrypt(context.Background(), encrypted, "different-key-32-bytes-long!!")
 	if err != nil {
 		fmt.Printf("Decrypt with different key failed: %v\n", err)
 	}
@@ -129,36 +130,36 @@ func ExampleNewModule_aesKeyRotation() {
 	// Decrypt with different key failed: failed to decrypt: cipher: message authentication failed
 }
 
-// ExampleNewModule_JWT_KeyRotation demonstrates key rotation with JWT
-func ExampleNewModule_jwtKeyRotation() {
-	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "original-secret-key")
+// ExampleNewToken_JWT_KeyRotation demonstrates key rotation with JWT
+func ExampleNewToken_jwtKeyRotation() {
+	jwtModule, _ := cryptography.NewToken(cryptography.TokenJWT, "original-secret-key")
 
-	// Encrypt with original key
-	token, _ := jwtModule.Encrypt("JWT message")
+	// Sign with original key
+	token, _ := jwtModule.Sign(context.Background(), "JWT message")
 
-	// Decrypt with same key (default)
-	decrypted1, _ := jwtModule.Decrypt(token)
-	fmt.Printf("Decrypted with default key: %v\n", decrypted1 != nil)
+	// Verify with same key (default)
+	decrypted1, _ := jwtModule.VerifyToken(context.Background(), token)
+	fmt.Printf("Verified with default key: %v\n", decrypted1 != nil)
 
-	// Decrypt with different key (will fail - invalid signature)
-	_, err := jwtModule.Decrypt(token, "different-secret-key")
+	// Verify with different key (will fail - invalid signature)
+	_, err := jwtModule.VerifyToken(context.Background(), token, "different-secret-key")
 	if err != nil {
-		fmt.Printf("Decrypt with different key failed: %v\n", err)
+		fmt.Printf("Verify with different key failed: %v\n", err)
 	}
 	// Output:
-	// Decrypted with default key: true
-	// Decrypt with different key failed: invalid signature
+	// Verified with default key: true
+	// Verify with different key failed: invalid signature
 }
 
-// ExampleNewModule_Hash demonstrates hash module usage
-func ExampleNewModule_hash() {
+// ExampleNewHash_SHA256 demonstrates hash module usage
+func ExampleNewHash_sha256() {
 	// SHA-256 hash module
-	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha256")
+	hashModule, _ := cryptography.NewHash(cryptography.HashSHA256)
 
 	data := "Hello, World!"
-	hash, _ := hashModule.Encrypt(data)
+	hash, _ := hashModule.Hash(context.Background(), data)
 
-	valid, _ := hashModule.Verify(data, hash)
+	valid, _ := hashModule.Verify(context.Background(), data, hash)
 	fmt.Printf("Hash length: %d\n", len(hash))
 	fmt.Printf("Verification: %v\n", valid)
 	// Output:
@@ -166,29 +167,29 @@ func ExampleNewModule_hash() {
 	// Verification: true
 }
 
-// ExampleNewModule_Hash_SHA512 demonstrates SHA-512 hashing
-func ExampleNewModule_hashSHA512() {
-	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha512")
+// ExampleNewHash_SHA512 demonstrates SHA-512 hashing
+func ExampleNewHash_sha512() {
+	hashModule, _ := cryptography.NewHash(cryptography.HashSHA512)
 
 	data := "Hello, World!"
-	hash, _ := hashModule.Encrypt(data)
+	hash, _ := hashModule.Hash(context.Background(), data)
 	fmt.Printf("SHA-512 Hash length: %d\n", len(hash))
 
-	valid, _ := hashModule.Verify(data, hash)
+	valid, _ := hashModule.Verify(context.Background(), data, hash)
 	fmt.Printf("Verification: %v\n", valid)
 	// Output:
 	// SHA-512 Hash length: 128
 	// Verification: true
 }
 
-// ExampleNewModule_Hash_Bcrypt demonstrates bcrypt password hashing
-func ExampleNewModule_hashBcrypt() {
-	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "bcrypt")
+// ExampleNewBcrypt demonstrates bcrypt password hashing
+func ExampleNewBcrypt() {
+	hashModule, _ := cryptography.NewBcrypt(10)
 
 	password := "mySecurePassword123"
-	hash, _ := hashModule.Encrypt(password)
+	hash, _ := hashModule.Hash(context.Background(), password)
 
-	valid, _ := hashModule.Verify(password, hash)
+	valid, _ := hashModule.Verify(context.Background(), password, hash)
 	if len(hash) >= 7 {
 		fmt.Printf("Hash starts with: %s\n", hash[:7])
 	} else {
@@ -202,19 +203,19 @@ func ExampleNewModule_hashBcrypt() {
 	// Verification: true
 }
 
-// ExampleNewModule_Verify demonstrates verification functionality
-func ExampleNewModule_verify() {
-	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+// ExampleNewEncryption_Verify demonstrates verification functionality
+func ExampleNewEncryption_verify() {
+	aesModule, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "my-secret-key-32-bytes-long!!")
 
 	data := "Hello, World!"
-	encrypted, _ := aesModule.Encrypt(data)
+	encrypted, _ := aesModule.Encrypt(context.Background(), data)
 
 	// Verify with correct data
-	valid1, _ := aesModule.Verify(data, encrypted)
+	valid1, _ := aesModule.Verify(context.Background(), data, encrypted)
 	fmt.Printf("Verify correct data: %v\n", valid1)
 
 	// Verify with wrong data
-	valid2, _ := aesModule.Verify("Wrong data", encrypted)
+	valid2, _ := aesModule.Verify(context.Background(), "Wrong data", encrypted)
 	fmt.Printf("Verify wrong data: %v\n", valid2)
 	// Output:
 	// Verify correct data: true

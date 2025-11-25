@@ -1,31 +1,16 @@
 # Cryptography
 
-A flexible, modular cryptography library for Go that supports multiple encryption algorithms with a unified interface. Easily switch between different encryption modules (AES, JWT, etc.) without changing your code.
+A flexible, modular cryptography library for Go supporting encryption, token signing, and hashing with a unified interface.
 
 ## Features
 
-- 🔄 **Modular Design**: Easy to switch between encryption modules
-- 🔑 **Flexible Keys**: Support for key rotation and per-operation keys
-- 📦 **Flexible Data Types**: Encrypt strings, maps, structs, or any data type
-- ⏱️ **TTL Support**: Optional time-to-live for encrypted data (JWT)
-- 🎯 **Unified Interface**: Same API for all encryption modules
-- 🔒 **Production Ready**: Uses industry-standard algorithms (AES-256-GCM, HMAC-SHA256)
-- 🔐 **One-Way Hashing**: SHA-256, SHA-512, and bcrypt for password hashing and data integrity
-
-## Design Pattern
-
-This library implements the **Factory Pattern** with a unified interface, allowing easy switching between different encryption modules without changing client code.
-
-![Design Pattern Diagram](docs/design-pattern.svg)
-
-
-### Pattern Benefits
-
-- **Polymorphism**: All modules implement the same interface
-- **Flexibility**: Easy to add new encryption algorithms
-- **Maintainability**: Changes to one module don't affect others
-- **Testability**: Easy to mock and test individual modules
-- **Type Safety**: Interface ensures consistent API across modules
+- 🔄 **Modular Design**: Easy switching between module types
+- 🔑 **Flexible Keys**: Key rotation and per-operation keys
+- 📦 **Flexible Data Types**: Works with strings, maps, structs, or any data type
+- ⏱️ **TTL Support**: Optional time-to-live for JWT tokens
+- 🔒 **Production Ready**: Industry-standard algorithms (AES-256-GCM, HMAC-SHA256)
+- 🔐 **Hashing**: SHA-256, SHA-512, and bcrypt for password hashing
+- ⏰ **Context Support**: All operations support cancellation and timeouts
 
 ## Installation
 
@@ -39,404 +24,249 @@ go get github.com/tjandrayana/cryptography
 package main
 
 import (
+    "context"
     "fmt"
     "github.com/tjandrayana/cryptography"
 )
 
 func main() {
-    // Create an AES encryption module
-    module, err := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
-    if err != nil {
-        // Handle error appropriately (log, return, etc.)
-        // Never panic in production code
-    }
-
-    // Encrypt data
-    encrypted, err := module.Encrypt("Hello, World!")
-    if err != nil {
-        // Handle error appropriately (log, return, etc.)
-        // Never panic in production code
-    }
-    fmt.Println("Encrypted:", encrypted)
-
-    // Decrypt data
-    decrypted, err := module.Decrypt(encrypted)
-    if err != nil {
-        // Handle error appropriately (log, return, etc.)
-        // Never panic in production code
-    }
-    fmt.Println("Decrypted:", decrypted)
+    // Create encryption module
+    encryption, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "my-secret-key-32-bytes-long!!")
+    
+    ctx := context.Background()
+    encrypted, _ := encryption.Encrypt(ctx, "Hello, World!")
+    decrypted, _ := encryption.Decrypt(ctx, encrypted)
+    fmt.Println(decrypted) // Output: Hello, World!
 }
 ```
 
 ## Usage Examples
 
-### Basic Encryption/Decryption
+### Encryption
 
 ```go
-// Create a module
-module, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+ctx := context.Background()
+encryption, _ := cryptography.NewEncryption(cryptography.EncryptionAES256GCM, "my-secret-key-32-bytes-long!!")
 
-// Encrypt a string
-encrypted, _ := module.Encrypt("Hello, World!")
+// Encrypt any data type
+encrypted, _ := encryption.Encrypt(ctx, "Hello, World!")
+encrypted, _ := encryption.Encrypt(ctx, map[string]interface{}{"user_id": 123})
+encrypted, _ := encryption.Encrypt(ctx, userStruct)
 
 // Decrypt
-decrypted, _ := module.Decrypt(encrypted)
-fmt.Println(decrypted) // Output: Hello, World!
+decrypted, _ := encryption.Decrypt(ctx, encrypted)
+
+// Decrypt with different key (key rotation)
+decrypted, _ := encryption.Decrypt(ctx, encrypted, "different-key")
 ```
 
-### Encrypting Structured Data
-
-The library supports any data type - strings, maps, structs, etc.
+### JWT Tokens
 
 ```go
-// Encrypt a map
-data := map[string]interface{}{
-    "user_id": 12345,
-    "username": "john_doe",
-    "email": "john@example.com",
-}
+ctx := context.Background()
+tokenModule, _ := cryptography.NewToken(cryptography.TokenJWT, "my-jwt-secret-key")
 
-encrypted, _ := module.Encrypt(data)
-decrypted, _ := module.Decrypt(encrypted)
+// Sign without TTL
+token, _ := tokenModule.Sign(ctx, map[string]interface{}{"user_id": 123})
 
-// Decrypted data maintains its structure
-if dataMap, ok := decrypted.(map[string]interface{}); ok {
-    fmt.Println("User ID:", dataMap["user_id"])
-}
+// Sign with TTL
+token, _ := tokenModule.Sign(ctx, data, cryptography.WithTokenTTL(1*time.Hour))
+
+// Verify
+data, err := tokenModule.VerifyToken(ctx, token)
 ```
 
-### Encrypting Structs
+**Note**: JWT payloads are signed (not encrypted) - anyone can decode them, but only those with the key can verify authenticity.
+
+### Hashing
 
 ```go
-type User struct {
-    ID       int    `json:"id"`
-    Username string `json:"username"`
-    Email    string `json:"email"`
-}
+ctx := context.Background()
 
-user := User{ID: 123, Username: "jane_doe", Email: "jane@example.com"}
+// SHA-256/SHA-512
+hashModule, _ := cryptography.NewHash(cryptography.HashSHA256)
+hash, _ := hashModule.Hash(ctx, "data")
+isValid, _ := hashModule.Verify(ctx, "data", hash)
 
-encrypted, _ := module.Encrypt(user)
-decrypted, _ := module.Decrypt(encrypted)
+// Bcrypt (for passwords)
+bcryptModule, _ := cryptography.NewBcrypt(10)
+passwordHash, _ := bcryptModule.Hash(ctx, "password")
+isValid, _ := bcryptModule.Verify(ctx, "password", passwordHash)
 ```
 
-### JWT with TTL (Time To Live)
+### Context and Timeouts
 
 ```go
-import (
-    "time"
-    "github.com/tjandrayana/cryptography"
-)
+// With timeout
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+encrypted, err := encryption.Encrypt(ctx, "data")
 
-// Create JWT module
-jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
-
-// Encrypt with 1 hour expiration
-data := map[string]interface{}{
-    "user_id": 12345,
-    "username": "john_doe",
-}
-
-token, _ := jwtModule.Encrypt(data, cryptography.WithTTL(1*time.Hour))
-
-// Decrypt (will fail if token expired)
-decrypted, err := jwtModule.Decrypt(token)
-if err != nil {
-    // Handle expiration error
-    fmt.Println("Token expired:", err)
-}
-```
-
-### Using Different Keys for Decryption
-
-Support for key rotation and flexible key management:
-
-```go
-// Encrypt with default key
-encrypted, _ := module.Encrypt("Secret message")
-
-// Decrypt with default key
-decrypted1, _ := module.Decrypt(encrypted)
-
-// Decrypt with a different key (for key rotation scenarios)
-differentKey := "different-secret-key-32-bytes-long!!"
-decrypted2, _ := module.Decrypt(encrypted, differentKey)
-```
-
-### One-Way Hashing
-
-Hash data for integrity checks or password storage using the same `Encrypt()` interface:
-
-```go
-// Create a hash module (SHA-256 by default)
-hashModule, _ := cryptography.NewHashModule("sha256")
-
-// Hash data using Encrypt() - same interface as encryption!
-data := "Sensitive information"
-hash, _ := hashModule.Encrypt(data)
-
-// Verify data matches hash
-isValid, _ := hashModule.Verify(data, hash)
-if isValid {
-    fmt.Println("Data integrity verified!")
-}
-
-// For passwords, use bcrypt
-bcryptModule, _ := cryptography.NewHashModule("bcrypt")
-passwordHash, _ := bcryptModule.Encrypt("myPassword123")
-isValid, _ := bcryptModule.Verify("myPassword123", passwordHash)
-```
-
-### Switching Between Modules
-
-The unified interface makes it easy to switch encryption algorithms:
-
-```go
-// Use AES
-aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "aes-key-32-bytes-long!!")
-
-// Switch to JWT - same interface!
-jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "jwt-secret-key")
-
-// Switch to Hash - same interface!
-hashModule, _ := cryptography.NewHashModule("sha256")
-
-// All modules implement the same interface
-var modules []cryptography.Cryptography = []cryptography.Cryptography{
-    aesModule, 
-    jwtModule,
-    hashModule,
-}
-
-for _, module := range modules {
-    result, _ := module.Encrypt("Hello")
-    
-    // For hash modules, use Verify instead of Decrypt
-    isValid, err := module.Verify("Hello", result)
-    if err == nil {
-        // It's a hash module
-        fmt.Println("Hash verified:", isValid)
-    } else {
-        // It's an encryption module
-        decrypted, _ := module.Decrypt(result)
-        fmt.Println(decrypted)
-    }
-}
+// Or use convenience helper
+ctx, cancel := cryptography.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
 ```
 
 ## API Reference
 
-### Interface
-
-```go
-type Cryptography interface {
-    // Encrypt encrypts or hashes data of any type
-    // Returns the encrypted/hashed string representation
-    // For hash modules, this performs one-way hashing
-    Encrypt(data interface{}, opts ...interface{}) (string, error)
-    
-    // Decrypt decrypts the ciphertext and returns the original data
-    // Key is optional - if not provided, uses module's default key
-    // For hash modules, this returns an error (hashing is one-way)
-    Decrypt(ciphertext string, key ...string) (interface{}, error)
-    
-    // Verify checks if the data matches the hash/encrypted value
-    // Returns true if the data matches, false otherwise
-    // For encryption modules, this decrypts and compares
-    // For hash modules, this verifies the hash directly
-    Verify(data interface{}, hash string) (bool, error)
-}
-```
-
 ### Factory Functions
 
 ```go
-// Create encryption module
-func NewModule(moduleType ModuleType, key string) (Cryptography, error)
-
-// Create hash module with specific algorithm
-func NewHashModule(algorithm string) (Cryptography, error)
-// algorithm: "sha256" (default), "sha512", or "bcrypt"
-
-// Create bcrypt module with custom cost
-func NewBcryptModule(cost int) (Cryptography, error)
-// cost: bcrypt cost factor (4-31, default is 10)
+NewEncryption(algorithm EncryptionAlgorithm, key string) (Encryption, error)
+NewToken(standard TokenStandard, key string) (Token, error)
+NewHash(algorithm HashAlgorithm) (Hash, error)
+NewBcrypt(cost int) (Hash, error)
 ```
 
-**Module Types:**
-- `cryptography.ModuleTypeAES` - AES-256-GCM encryption
-- `cryptography.ModuleTypeJWT` - JWT token encryption
-- `cryptography.ModuleTypeHash` - One-way hashing (SHA-256, SHA-512, bcrypt)
+### Interfaces
+
+```go
+type Encryption interface {
+    Encrypt(ctx context.Context, data interface{}, opts ...interface{}) (string, error)
+    Decrypt(ctx context.Context, ciphertext string, key ...string) (interface{}, error)
+    Verify(ctx context.Context, data interface{}, encrypted string) (bool, error)
+}
+
+type Token interface {
+    Sign(ctx context.Context, data interface{}, opts ...interface{}) (string, error)
+    VerifyToken(ctx context.Context, token string, key ...string) (interface{}, error)
+    Validate(ctx context.Context, data interface{}, token string) (bool, error)
+}
+
+type Hash interface {
+    Hash(ctx context.Context, data interface{}, opts ...interface{}) (string, error)
+    Verify(ctx context.Context, data interface{}, hash string) (bool, error)
+}
+```
+
+### Module Types
+
+- **AES-256-GCM**: Encryption algorithm for confidentiality (data is encrypted)
+- **JWT (JWS)**: Token format for authenticity/integrity (data is signed, not encrypted)
+- **SHA-256/SHA-512**: Fast hashing for data integrity
+- **Bcrypt**: Slow hashing for password storage
 
 ### Options
 
 ```go
-// EncryptOptions for encryption configuration
-type EncryptOptions struct {
-    TTL time.Duration // Time to live (0 means no expiration)
-}
-
-// Helper function to create options with TTL
-func WithTTL(ttl time.Duration) *EncryptOptions
-```
-
-## Module Details
-
-### AES Module
-
-- **Algorithm**: AES-256-GCM
-- **Key Size**: 32 bytes (automatically padded/truncated)
-- **Features**:
-  - Symmetric encryption
-  - Authenticated encryption (GCM mode)
-  - Supports any data type
-- **TTL**: Not applicable (symmetric encryption)
-
-**Example:**
-```go
-aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
-encrypted, _ := aesModule.Encrypt("Hello, World!")
-decrypted, _ := aesModule.Decrypt(encrypted)
-```
-
-### JWT Module
-
-- **Algorithm**: HMAC-SHA256
-- **Format**: JWT (JSON Web Token)
-- **Features**:
-  - Token-based encryption
-  - Optional TTL/expiration
-  - Structured data support
-  - Signature verification
-- **TTL**: Supported via `EncryptOptions`
-
-**Example:**
-```go
-jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
-
-// Without TTL
-token, _ := jwtModule.Encrypt(map[string]interface{}{"user_id": 123})
-
-// With TTL (1 hour)
-token, _ := jwtModule.Encrypt(
-    map[string]interface{}{"user_id": 123},
-    cryptography.WithTTL(1*time.Hour),
-)
-
-// Decrypt
-data, _ := jwtModule.Decrypt(token)
-```
-
-### Hash Module
-
-- **Algorithms**: SHA-256, SHA-512, bcrypt
-- **Features**:
-  - One-way hashing (cannot be decrypted)
-  - Data integrity verification
-  - Password hashing (bcrypt)
-  - Supports any data type
-- **Use Cases**: Password storage, data integrity checks, checksums
-
-**Example - SHA-256:**
-```go
-// Create SHA-256 hash module
-hashModule, _ := cryptography.NewHashModule("sha256")
-
-// Hash data using Encrypt() - same interface!
-hash, _ := hashModule.Encrypt("Hello, World!")
-fmt.Println("Hash:", hash)
-
-// Verify data matches hash
-isValid, _ := hashModule.Verify("Hello, World!", hash)
-fmt.Println("Valid:", isValid) // true
-```
-
-**Example - SHA-512:**
-```go
-// Create SHA-512 hash module
-hashModule, _ := cryptography.NewHashModule("sha512")
-
-hash, _ := hashModule.Encrypt("Hello, World!")
-isValid, _ := hashModule.Verify("Hello, World!", hash)
-```
-
-**Example - Bcrypt (for passwords):**
-```go
-// Create bcrypt hash module with default cost
-bcryptModule, _ := cryptography.NewHashModule("bcrypt")
-
-// Or with custom cost (higher = more secure but slower)
-bcryptModule, _ := cryptography.NewBcryptModule(12)
-
-// Hash a password using Encrypt()
-password := "mySecurePassword123"
-hashedPassword, _ := bcryptModule.Encrypt(password)
-
-// Verify password
-isValid, _ := bcryptModule.Verify(password, hashedPassword)
-if isValid {
-    fmt.Println("Password is correct!")
-}
-```
-
-**Note:** For hash modules, `Encrypt()` performs one-way hashing, and `Decrypt()` will return an error since hashing is one-way. The same `Encrypt()` interface is used for both encryption and hashing!
-
-## Advanced Features
-
-### Flexible Data Types
-
-The library automatically handles different data types:
-
-- **Strings**: Direct encryption
-- **Maps**: Converted to JSON then encrypted
-- **Structs**: Marshaled to JSON then encrypted
-- **Any type**: Automatically marshaled/unmarshaled
-
-### Key Management
-
-- **Default Key**: Set during module creation
-- **Per-Operation Key**: Override key during decrypt
-- **Key Rotation**: Decrypt old data with new keys
-
-### Error Handling
-
-```go
-encrypted, err := module.Encrypt(data)
-if err != nil {
-    // Handle encryption error
-}
-
-decrypted, err := module.Decrypt(encrypted)
-if err != nil {
-    // Handle decryption error
-    // Common errors:
-    // - Invalid ciphertext format
-    // - Invalid signature (JWT)
-    // - Token expired (JWT)
-    // - Decryption failed
-}
+// Token TTL
+token, _ := tokenModule.Sign(ctx, data, cryptography.WithTokenTTL(1*time.Hour))
 ```
 
 ## Best Practices
 
 1. **Key Management**: Store keys securely (environment variables, secret managers)
-2. **Key Size**: Use appropriate key sizes (32 bytes for AES-256)
-3. **TTL Usage**: Set appropriate TTL for JWT tokens based on use case
-4. **Error Handling**: Always check errors from Encrypt/Decrypt operations
-5. **Type Assertions**: When decrypting, use type assertions to handle different return types
+2. **Key Size**: Use 32 bytes for AES-256 (automatically derived from any key length)
+3. **Error Handling**: Always check errors from operations
+4. **Context**: Use timeouts in production code
+5. **JWT vs Encryption**: Use JWT for tokens (authenticity), AES for secrets (confidentiality)
+
+## Architecture
+
+The library follows a clean, layered architecture based on SOLID principles and design patterns.
+
+### Design Patterns
+
+1. **Factory Pattern**: Centralized object creation through factory functions (`NewEncryption`, `NewToken`, `NewHash`)
+2. **Interface Segregation**: Separate interfaces for distinct concerns (`Encryption`, `Token`, `Hash`)
+3. **Dependency Inversion**: Clients depend on abstractions (interfaces), not concrete implementations
+
+### Architecture Layers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Client Application                        │
+│  Uses factory functions to create modules                    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Factory Layer (crypto.go)                       │
+│  • NewEncryption() → Returns Encryption interface           │
+│  • NewToken() → Returns Token interface                     │
+│  • NewHash() → Returns Hash interface                       │
+│  • Centralized creation logic                               │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Interface Layer (interfaces.go)                    │
+│  • Encryption interface (Encrypt, Decrypt, Verify)          │
+│  • Token interface (Sign, VerifyToken, Validate)             │
+│  • Hash interface (Hash, Verify)                             │
+│  • Defines contracts without implementation details         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│         Implementation Layer (subpackages)                   │
+│  • encryption/aes/ → AES-256-GCM implementation             │
+│  • token/jwt/ → JWT (JWS) implementation                    │
+│  • hash/sha/ → SHA-256/SHA-512 implementation              │
+│  • hash/bcrypt/ → Bcrypt implementation                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+cryptography/
+├── crypto.go              # Factory functions
+├── interfaces.go           # Interface definitions
+├── types.go               # Configuration types (TokenOptions)
+├── context.go             # Context helper functions
+├── encryption/
+│   └── aes/
+│       ├── aes.go         # AES-256-GCM implementation
+│       └── aes_test.go
+├── token/
+│   └── jwt/
+│       ├── jwt.go         # JWT (JWS) implementation
+│       └── jwt_test.go
+└── hash/
+    ├── sha/
+    │   ├── sha.go         # SHA-256/SHA-512 implementation
+    │   └── sha_test.go
+    └── bcrypt/
+        ├── bcrypt.go      # Bcrypt implementation
+        └── bcrypt_test.go
+```
+
+### Key Architectural Principles
+
+1. **Separation of Concerns**: Each module type (Encryption, Token, Hash) has its own interface and implementation
+2. **Open/Closed Principle**: Easy to add new algorithms without modifying existing code
+3. **Single Responsibility**: Each package handles one specific algorithm or standard
+4. **Context-Aware**: All operations accept `context.Context` for cancellation and timeouts
+5. **Type Safety**: Strong typing prevents misuse (e.g., can't use encryption algorithm where token is expected)
+
+### Data Flow
+
+1. **Client** calls factory function (`NewEncryption`, `NewToken`, or `NewHash`)
+2. **Factory** selects appropriate implementation based on algorithm/standard type
+3. **Factory** returns interface type (not concrete implementation)
+4. **Client** uses interface methods with `context.Context`
+5. **Implementation** performs cryptographic operations with context support
+
+### Extensibility
+
+To add a new algorithm:
+
+1. Create new implementation in appropriate subpackage (e.g., `encryption/des/`)
+2. Implement the corresponding interface (`Encryption`, `Token`, or `Hash`)
+3. Add algorithm constant to `crypto.go`
+4. Add case to factory function in `crypto.go`
+
+The existing code remains unchanged, following the Open/Closed Principle.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions welcome! The codebase follows clean architecture principles with factory functions in `crypto.go`, interfaces in `interfaces.go`, and implementations in subpackages.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Author
 
-**TJ (tjandrayana)**
-
-- GitHub: [@tjandrayana](https://github.com/tjandrayana)
-
+**TJ (tjandrayana)** - [@tjandrayana](https://github.com/tjandrayana)
