@@ -1,4 +1,4 @@
-module github.com/tjandrayana/cryptograhy
+module github.com/tjandrayana/cryptography
 
 go 1.24.0
 

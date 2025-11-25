@@ -1,15 +1,15 @@
-package cryptograhy
+package cryptography
 
 import (
 	"fmt"
 
-	"github.com/tjandrayana/cryptograhy/aes"
-	"github.com/tjandrayana/cryptograhy/hash"
-	"github.com/tjandrayana/cryptograhy/jwt"
+	"github.com/tjandrayana/cryptography/aes"
+	"github.com/tjandrayana/cryptography/hash"
+	"github.com/tjandrayana/cryptography/jwt"
 )
 
-// Cryptograhy defines the interface for encryption modules
-type Cryptograhy interface {
+// Cryptography defines the interface for encryption modules
+type Cryptography interface {
 	// Encrypt encrypts data of any type (string, map, struct, etc.)
 	// Returns the encrypted/hashed string representation
 	// Options can be *EncryptOptions or nil
@@ -41,7 +41,7 @@ const (
 // NewModule creates a new encryption module based on the module type
 // For hash modules, the key parameter is used as the algorithm name (sha256, sha512, bcrypt)
 // If key is empty for hash modules, defaults to sha256
-func NewModule(moduleType ModuleType, key string) (Cryptograhy, error) {
+func NewModule(moduleType ModuleType, key string) (Cryptography, error) {
 	switch moduleType {
 	case ModuleTypeAES:
 		return aes.NewAESModule(key)
@@ -57,7 +57,7 @@ func NewModule(moduleType ModuleType, key string) (Cryptograhy, error) {
 
 // NewHashModule creates a hash module with a specific algorithm
 // algorithm: "sha256" (default), "sha512", or "bcrypt"
-func NewHashModule(algorithm string) (Cryptograhy, error) {
+func NewHashModule(algorithm string) (Cryptography, error) {
 	var hashAlgo hash.HashAlgorithm
 	switch algorithm {
 	case "sha256", "":
@@ -74,6 +74,6 @@ func NewHashModule(algorithm string) (Cryptograhy, error) {
 }
 
 // NewBcryptModule creates a bcrypt hash module with custom cost
-func NewBcryptModule(cost int) (Cryptograhy, error) {
+func NewBcryptModule(cost int) (Cryptography, error) {
 	return hash.NewBcryptModule(cost)
 }

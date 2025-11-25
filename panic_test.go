@@ -1,15 +1,15 @@
-package cryptograhy_test
+package cryptography_test
 
 import (
 	"testing"
 
-	"github.com/tjandrayana/cryptograhy"
+	"github.com/tjandrayana/cryptography"
 )
 
 // TestPanicRecovery tests that the library handles panic scenarios gracefully
 func TestPanicRecovery(t *testing.T) {
 	t.Run("AES with nil data", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -22,7 +22,7 @@ func TestPanicRecovery(t *testing.T) {
 	})
 
 	t.Run("JWT with invalid token format", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -47,7 +47,7 @@ func TestPanicRecovery(t *testing.T) {
 	})
 
 	t.Run("AES with empty ciphertext", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -59,7 +59,7 @@ func TestPanicRecovery(t *testing.T) {
 	})
 
 	t.Run("Hash with nil data", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "sha256")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeHash, "sha256")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -72,7 +72,7 @@ func TestPanicRecovery(t *testing.T) {
 	})
 
 	t.Run("JWT with empty key in decrypt uses default", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -94,7 +94,7 @@ func TestPanicRecovery(t *testing.T) {
 	})
 
 	t.Run("AES with empty key in decrypt uses default", func(t *testing.T) {
-		module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
+		module, err := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
 		if err != nil {
 			t.Fatalf("Failed to create module: %v", err)
 		}
@@ -119,7 +119,7 @@ func TestPanicRecovery(t *testing.T) {
 // TestTypeAssertionSafety tests safe type assertions
 func TestTypeAssertionSafety(t *testing.T) {
 	t.Run("JWT decrypt returns map safely", func(t *testing.T) {
-		module, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
+		module, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
 		token, _ := module.Encrypt("test")
 
 		decrypted, err := module.Decrypt(token)
@@ -147,7 +147,7 @@ func TestTypeAssertionSafety(t *testing.T) {
 // TestReflectionSafety tests that reflection operations don't panic
 func TestReflectionSafety(t *testing.T) {
 	t.Run("JWT with invalid option types", func(t *testing.T) {
-		module, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
+		module, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
 
 		// Test with various invalid option types that could cause reflection panics
 		invalidOptions := []interface{}{
@@ -173,14 +173,14 @@ func TestReflectionSafety(t *testing.T) {
 // TestBoundsChecking tests array/slice bounds safety
 func TestBoundsChecking(t *testing.T) {
 	t.Run("JWT with malformed token parts", func(t *testing.T) {
-		module, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
+		module, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
 
 		malformedTokens := []string{
-			"",           // Empty
-			".",          // One dot
-			"..",         // Two dots, no content
-			"header.",    // Missing parts
-			".payload.",  // Missing parts
+			"",               // Empty
+			".",              // One dot
+			"..",             // Two dots, no content
+			"header.",        // Missing parts
+			".payload.",      // Missing parts
 			"header.payload", // Missing signature
 		}
 
@@ -194,7 +194,7 @@ func TestBoundsChecking(t *testing.T) {
 	})
 
 	t.Run("AES with very short ciphertext", func(t *testing.T) {
-		module, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
+		module, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
 
 		// Very short base64 strings that could cause bounds issues
 		shortCiphertexts := []string{
@@ -218,9 +218,9 @@ func TestBoundsChecking(t *testing.T) {
 // TestNilPointerSafety tests nil pointer dereference prevention
 func TestNilPointerSafety(t *testing.T) {
 	t.Run("Verify with nil data", func(t *testing.T) {
-		aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
-		jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
-		hashModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "sha256")
+		aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
+		jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
+		hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha256")
 
 		// All should return errors, not panic
 		_, err := aesModule.Verify(nil, "encrypted")
@@ -240,9 +240,9 @@ func TestNilPointerSafety(t *testing.T) {
 	})
 
 	t.Run("Verify with empty hash/token", func(t *testing.T) {
-		aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "test-key-12345678901234567890")
-		jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "test-key")
-		hashModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "sha256")
+		aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "test-key-12345678901234567890")
+		jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "test-key")
+		hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha256")
 
 		// All should return errors, not panic
 		_, err := aesModule.Verify("data", "")
@@ -261,4 +261,3 @@ func TestNilPointerSafety(t *testing.T) {
 		}
 	})
 }
-

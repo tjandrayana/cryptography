@@ -1,4 +1,4 @@
-package cryptograhy
+package cryptography
 
 import (
 	"testing"
@@ -108,4 +108,3 @@ func TestNewModule_InvalidType(t *testing.T) {
 		t.Error("NewModule() should return error for invalid module type")
 	}
 }
-

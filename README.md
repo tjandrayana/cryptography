@@ -1,4 +1,4 @@
-# Cryptograhy
+# Cryptography
 
 A flexible, modular cryptography library for Go that supports multiple encryption algorithms with a unified interface. Easily switch between different encryption modules (AES, JWT, etc.) without changing your code.
 
@@ -30,7 +30,7 @@ This library implements the **Factory Pattern** with a unified interface, allowi
 ## Installation
 
 ```bash
-go get github.com/tjandrayana/cryptograhy
+go get github.com/tjandrayana/cryptography
 ```
 
 ## Quick Start
@@ -40,12 +40,12 @@ package main
 
 import (
     "fmt"
-    "github.com/tjandrayana/cryptograhy"
+    "github.com/tjandrayana/cryptography"
 )
 
 func main() {
     // Create an AES encryption module
-    module, err := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+    module, err := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
     if err != nil {
         // Handle error appropriately (log, return, etc.)
         // Never panic in production code
@@ -75,7 +75,7 @@ func main() {
 
 ```go
 // Create a module
-module, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+module, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
 
 // Encrypt a string
 encrypted, _ := module.Encrypt("Hello, World!")
@@ -126,11 +126,11 @@ decrypted, _ := module.Decrypt(encrypted)
 ```go
 import (
     "time"
-    "github.com/tjandrayana/cryptograhy"
+    "github.com/tjandrayana/cryptography"
 )
 
 // Create JWT module
-jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "my-jwt-secret-key")
+jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
 
 // Encrypt with 1 hour expiration
 data := map[string]interface{}{
@@ -138,7 +138,7 @@ data := map[string]interface{}{
     "username": "john_doe",
 }
 
-token, _ := jwtModule.Encrypt(data, cryptograhy.WithTTL(1*time.Hour))
+token, _ := jwtModule.Encrypt(data, cryptography.WithTTL(1*time.Hour))
 
 // Decrypt (will fail if token expired)
 decrypted, err := jwtModule.Decrypt(token)
@@ -170,7 +170,7 @@ Hash data for integrity checks or password storage using the same `Encrypt()` in
 
 ```go
 // Create a hash module (SHA-256 by default)
-hashModule, _ := cryptograhy.NewHashModule("sha256")
+hashModule, _ := cryptography.NewHashModule("sha256")
 
 // Hash data using Encrypt() - same interface as encryption!
 data := "Sensitive information"
@@ -183,7 +183,7 @@ if isValid {
 }
 
 // For passwords, use bcrypt
-bcryptModule, _ := cryptograhy.NewHashModule("bcrypt")
+bcryptModule, _ := cryptography.NewHashModule("bcrypt")
 passwordHash, _ := bcryptModule.Encrypt("myPassword123")
 isValid, _ := bcryptModule.Verify("myPassword123", passwordHash)
 ```
@@ -194,16 +194,16 @@ The unified interface makes it easy to switch encryption algorithms:
 
 ```go
 // Use AES
-aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "aes-key-32-bytes-long!!")
+aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "aes-key-32-bytes-long!!")
 
 // Switch to JWT - same interface!
-jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "jwt-secret-key")
+jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "jwt-secret-key")
 
 // Switch to Hash - same interface!
-hashModule, _ := cryptograhy.NewHashModule("sha256")
+hashModule, _ := cryptography.NewHashModule("sha256")
 
 // All modules implement the same interface
-var modules []cryptograhy.Cryptograhy = []cryptograhy.Cryptograhy{
+var modules []cryptography.Cryptography = []cryptography.Cryptography{
     aesModule, 
     jwtModule,
     hashModule,
@@ -230,7 +230,7 @@ for _, module := range modules {
 ### Interface
 
 ```go
-type Cryptograhy interface {
+type Cryptography interface {
     // Encrypt encrypts or hashes data of any type
     // Returns the encrypted/hashed string representation
     // For hash modules, this performs one-way hashing
@@ -253,21 +253,21 @@ type Cryptograhy interface {
 
 ```go
 // Create encryption module
-func NewModule(moduleType ModuleType, key string) (Cryptograhy, error)
+func NewModule(moduleType ModuleType, key string) (Cryptography, error)
 
 // Create hash module with specific algorithm
-func NewHashModule(algorithm string) (Cryptograhy, error)
+func NewHashModule(algorithm string) (Cryptography, error)
 // algorithm: "sha256" (default), "sha512", or "bcrypt"
 
 // Create bcrypt module with custom cost
-func NewBcryptModule(cost int) (Cryptograhy, error)
+func NewBcryptModule(cost int) (Cryptography, error)
 // cost: bcrypt cost factor (4-31, default is 10)
 ```
 
 **Module Types:**
-- `cryptograhy.ModuleTypeAES` - AES-256-GCM encryption
-- `cryptograhy.ModuleTypeJWT` - JWT token encryption
-- `cryptograhy.ModuleTypeHash` - One-way hashing (SHA-256, SHA-512, bcrypt)
+- `cryptography.ModuleTypeAES` - AES-256-GCM encryption
+- `cryptography.ModuleTypeJWT` - JWT token encryption
+- `cryptography.ModuleTypeHash` - One-way hashing (SHA-256, SHA-512, bcrypt)
 
 ### Options
 
@@ -295,7 +295,7 @@ func WithTTL(ttl time.Duration) *EncryptOptions
 
 **Example:**
 ```go
-aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
 encrypted, _ := aesModule.Encrypt("Hello, World!")
 decrypted, _ := aesModule.Decrypt(encrypted)
 ```
@@ -313,7 +313,7 @@ decrypted, _ := aesModule.Decrypt(encrypted)
 
 **Example:**
 ```go
-jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "my-jwt-secret-key")
+jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
 
 // Without TTL
 token, _ := jwtModule.Encrypt(map[string]interface{}{"user_id": 123})
@@ -321,7 +321,7 @@ token, _ := jwtModule.Encrypt(map[string]interface{}{"user_id": 123})
 // With TTL (1 hour)
 token, _ := jwtModule.Encrypt(
     map[string]interface{}{"user_id": 123},
-    cryptograhy.WithTTL(1*time.Hour),
+    cryptography.WithTTL(1*time.Hour),
 )
 
 // Decrypt
@@ -341,7 +341,7 @@ data, _ := jwtModule.Decrypt(token)
 **Example - SHA-256:**
 ```go
 // Create SHA-256 hash module
-hashModule, _ := cryptograhy.NewHashModule("sha256")
+hashModule, _ := cryptography.NewHashModule("sha256")
 
 // Hash data using Encrypt() - same interface!
 hash, _ := hashModule.Encrypt("Hello, World!")
@@ -355,7 +355,7 @@ fmt.Println("Valid:", isValid) // true
 **Example - SHA-512:**
 ```go
 // Create SHA-512 hash module
-hashModule, _ := cryptograhy.NewHashModule("sha512")
+hashModule, _ := cryptography.NewHashModule("sha512")
 
 hash, _ := hashModule.Encrypt("Hello, World!")
 isValid, _ := hashModule.Verify("Hello, World!", hash)
@@ -364,10 +364,10 @@ isValid, _ := hashModule.Verify("Hello, World!", hash)
 **Example - Bcrypt (for passwords):**
 ```go
 // Create bcrypt hash module with default cost
-bcryptModule, _ := cryptograhy.NewHashModule("bcrypt")
+bcryptModule, _ := cryptography.NewHashModule("bcrypt")
 
 // Or with custom cost (higher = more secure but slower)
-bcryptModule, _ := cryptograhy.NewBcryptModule(12)
+bcryptModule, _ := cryptography.NewBcryptModule(12)
 
 // Hash a password using Encrypt()
 password := "mySecurePassword123"

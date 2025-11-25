@@ -1,4 +1,4 @@
-package cryptograhy
+package cryptography
 
 import "time"
 
@@ -19,4 +19,3 @@ func (e *EncryptOptions) GetTTL() time.Duration {
 func WithTTL(ttl time.Duration) *EncryptOptions {
 	return &EncryptOptions{TTL: ttl}
 }
-

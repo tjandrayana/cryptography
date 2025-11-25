@@ -58,7 +58,7 @@ func (j *JWTModule) dataToMap(data interface{}) (map[string]interface{}, error) 
 }
 
 // Encrypt creates a JWT token from data of any type
-// Supports TTL through EncryptOptions (from cryptograhy package)
+// Supports TTL through EncryptOptions (from cryptography package)
 // If TTL is 0, the token will not expire
 // If TTL > 0, the token will expire after the specified duration
 func (j *JWTModule) Encrypt(data interface{}, opts ...interface{}) (string, error) {
@@ -73,7 +73,7 @@ func (j *JWTModule) Encrypt(data interface{}, opts ...interface{}) (string, erro
 	}
 
 	// Extract TTL from options using reflection
-	// Options should be *cryptograhy.EncryptOptions
+	// Options should be *cryptography.EncryptOptions
 	var ttl time.Duration
 	for _, opt := range opts {
 		if opt == nil {

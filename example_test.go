@@ -1,15 +1,15 @@
-package cryptograhy_test
+package cryptography_test
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/tjandrayana/cryptograhy"
+	"github.com/tjandrayana/cryptography"
 )
 
 // ExampleNewModule_AES demonstrates basic AES encryption and decryption
 func ExampleNewModule_aes() {
-	aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
 
 	plaintext := "Hello, World!"
 	encrypted, _ := aesModule.Encrypt(plaintext)
@@ -24,7 +24,7 @@ func ExampleNewModule_aes() {
 
 // ExampleNewModule_JWT demonstrates basic JWT token creation and decryption
 func ExampleNewModule_jwt() {
-	jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "my-jwt-secret-key")
+	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
 
 	plaintext := "Hello, World!"
 	encrypted, _ := jwtModule.Encrypt(plaintext)
@@ -41,7 +41,7 @@ func ExampleNewModule_jwt() {
 
 // ExampleNewModule_JWT_StructuredData demonstrates JWT with structured data
 func ExampleNewModule_jwtStructuredData() {
-	jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "my-jwt-secret-key")
+	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
 
 	data := map[string]interface{}{
 		"user_id":  12345,
@@ -63,14 +63,14 @@ func ExampleNewModule_jwtStructuredData() {
 
 // ExampleNewModule_JWT_WithTTL demonstrates JWT with time-to-live
 func ExampleNewModule_jwtWithTTL() {
-	jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "my-jwt-secret-key")
+	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "my-jwt-secret-key")
 
 	data := map[string]interface{}{
 		"user_id": 12345,
 	}
 
 	// Token expires in 1 hour
-	token, _ := jwtModule.Encrypt(data, cryptograhy.WithTTL(1*time.Hour))
+	token, _ := jwtModule.Encrypt(data, cryptography.WithTTL(1*time.Hour))
 
 	// Decrypt immediately (should work)
 	decrypted, _ := jwtModule.Decrypt(token)
@@ -85,7 +85,7 @@ func ExampleNewModule_jwtWithTTL() {
 
 // ExampleNewModule_AES_StructuredData demonstrates AES encryption with structs
 func ExampleNewModule_aesStructuredData() {
-	aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
 
 	type User struct {
 		ID       int    `json:"id"`
@@ -110,7 +110,7 @@ func ExampleNewModule_aesStructuredData() {
 
 // ExampleNewModule_AES_KeyRotation demonstrates key rotation with AES
 func ExampleNewModule_aesKeyRotation() {
-	aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "original-key-32-bytes-long!!")
+	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "original-key-32-bytes-long!!")
 
 	// Encrypt with original key
 	encrypted, _ := aesModule.Encrypt("Secret message")
@@ -131,7 +131,7 @@ func ExampleNewModule_aesKeyRotation() {
 
 // ExampleNewModule_JWT_KeyRotation demonstrates key rotation with JWT
 func ExampleNewModule_jwtKeyRotation() {
-	jwtModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeJWT, "original-secret-key")
+	jwtModule, _ := cryptography.NewModule(cryptography.ModuleTypeJWT, "original-secret-key")
 
 	// Encrypt with original key
 	token, _ := jwtModule.Encrypt("JWT message")
@@ -153,7 +153,7 @@ func ExampleNewModule_jwtKeyRotation() {
 // ExampleNewModule_Hash demonstrates hash module usage
 func ExampleNewModule_hash() {
 	// SHA-256 hash module
-	hashModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "sha256")
+	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha256")
 
 	data := "Hello, World!"
 	hash, _ := hashModule.Encrypt(data)
@@ -168,7 +168,7 @@ func ExampleNewModule_hash() {
 
 // ExampleNewModule_Hash_SHA512 demonstrates SHA-512 hashing
 func ExampleNewModule_hashSHA512() {
-	hashModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "sha512")
+	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "sha512")
 
 	data := "Hello, World!"
 	hash, _ := hashModule.Encrypt(data)
@@ -183,7 +183,7 @@ func ExampleNewModule_hashSHA512() {
 
 // ExampleNewModule_Hash_Bcrypt demonstrates bcrypt password hashing
 func ExampleNewModule_hashBcrypt() {
-	hashModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeHash, "bcrypt")
+	hashModule, _ := cryptography.NewModule(cryptography.ModuleTypeHash, "bcrypt")
 
 	password := "mySecurePassword123"
 	hash, _ := hashModule.Encrypt(password)
@@ -204,7 +204,7 @@ func ExampleNewModule_hashBcrypt() {
 
 // ExampleNewModule_Verify demonstrates verification functionality
 func ExampleNewModule_verify() {
-	aesModule, _ := cryptograhy.NewModule(cryptograhy.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
+	aesModule, _ := cryptography.NewModule(cryptography.ModuleTypeAES, "my-secret-key-32-bytes-long!!")
 
 	data := "Hello, World!"
 	encrypted, _ := aesModule.Encrypt(data)
